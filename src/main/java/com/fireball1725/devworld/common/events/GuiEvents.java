@@ -16,14 +16,15 @@ import net.minecraft.world.storage.ISaveFormat;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.client.event.GuiScreenEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.util.Random;
 
 public class GuiEvents {
-    private Minecraft mc = Minecraft.getMinecraft();
+    private Minecraft mc = Minecraft.getInstance();
     private String worldName = "Development World";
     private String worldSaveName = "DevWorld";
     private static final String[] disallowedFilenames = new String[] {"CON", "COM", "PRN", "AUX", "CLOCK$", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
@@ -80,10 +81,10 @@ public class GuiEvents {
     {
         this.worldSaveName = this.worldName.trim();
 
-        for (char c0 : ChatAllowedCharacters.ILLEGAL_FILE_CHARACTERS)
-        {
-            this.worldSaveName = this.worldSaveName.replace(c0, '_');
-        }
+//        for (char c0 : ChatAllowedCharacters.ILLEGAL_FILE_CHARACTERS)
+//        {
+//            this.worldSaveName = this.worldSaveName.replace(c0, '_');
+//        }
 
         if (StringUtils.isEmpty(this.worldSaveName))
         {
@@ -116,24 +117,24 @@ public class GuiEvents {
     private ISaveFormat saveLoader;
 
     public void launchIntegratedServer(String p_71371_1_, String p_71371_2_, WorldSettings p_71371_3_) {
-        this.saveLoader = new AnvilSaveConverter(new File(Minecraft.getMinecraft().mcDataDir, "saves"), null);
+        this.saveLoader = new AnvilSaveConverter(new File(Minecraft.getInstance().gameDir.toString(), "saves"), null);
 
-        Minecraft.getMinecraft().loadWorld((WorldClient)null);
+        Minecraft.getInstance().loadWorld((WorldClient)null);
         System.gc();
         ISaveHandler isavehandler = saveLoader.getSaveLoader(p_71371_1_, false);
 
         NBTTagCompound worldData = new NBTTagCompound();
         worldData.setString("generatorName", "flat");
         worldData.setString("generatorOptions", "3;minecraft:bedrock,3*minecraft:stone,52*minecraft:sandstone;2;");
-        worldData.setInteger("generatorVersion", 0);
+        worldData.setInt("generatorVersion", 0);
 
-        worldData.setInteger("GameType", 1);
+        worldData.setInt("GameType", 1);
 
         worldData.setBoolean("MapFeatures", true);
 
-        worldData.setInteger("SpawnX", 0);
-        worldData.setInteger("SpawnY", 80);
-        worldData.setInteger("SpawnZ", 0);
+        worldData.setInt("SpawnX", 0);
+        worldData.setInt("SpawnY", 80);
+        worldData.setInt("SpawnZ", 0);
 
         worldData.setLong("Time", 6000);
         worldData.setLong("DayTime", 6000);
@@ -149,12 +150,12 @@ public class GuiEvents {
 
         worldData.setTag("GameRules", worldRules);
 
-        WorldInfo worldInfo = new WorldInfo(worldData);
+        WorldInfo worldInfo = new WorldInfo(worldData, null, 0, null);
 
         isavehandler.saveWorldInfo(worldInfo);
 
         WorldSettings worldSettings = new WorldSettings(worldInfo);
 
-        Minecraft.getMinecraft().launchIntegratedServer(p_71371_1_, p_71371_2_, worldSettings);
+        Minecraft.getInstance().launchIntegratedServer(p_71371_1_, p_71371_2_, worldSettings);
     }
 }

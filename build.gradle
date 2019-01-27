@@ -1,25 +1,62 @@
-apply plugin: 'net.minecraftforge.gradle.forge'
-apply plugin: 'com.matthewprenger.cursegradle'
+apply plugin: 'net.minecraftforge.gradle'
 
 apply from: 'gradle/scripts/dependencies.gradle'
 apply from: 'gradle/scripts/integration.gradle'
 apply from: 'gradle/scripts/artifacts.gradle'
-apply from: 'gradle/scripts/optional.gradle'
+//apply from: 'gradle/scripts/optional.gradle'
 
 buildscript {
     repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        maven { url = 'https://plugins.gradle.org/m2/' }
         jcenter()
-        maven {
-            name = "forge"
-            url = "http://files.minecraftforge.net/maven"
-        }
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
+        mavenCentral()
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
-        classpath "gradle.plugin.com.matthewprenger:CurseGradle:1.0.9"
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+    }
+}
+
+version = minecraft_version + "-" + "b" + cibuild + "-univeral"
+group = "com.fireball1725.devworld"
+archivesBaseName = cibasename
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaVersion.VERSION_1_8
+
+minecraft {
+    //replaceIn "ModInfo.java"
+
+    //replace "@VERSION@", project.version
+    //replace "@MCVERSION@", minecraft_version
+
+    mappings channel: 'snapshot', version: '20180921-1.13'
+    runs {
+        client = {
+            workingDirectory project.file('run').canonicalPath
+            source sourceSets.main
+        }
+        server = {
+            workingDirectory project.file('run').canonicalPath
+        }
+    }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge.test:forge:1.13-24.0.115-1.13-pre'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', '1.13'
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'META_INF/mods.toml'
+
+        expand 'version': project.version, 'mcversion': '1.13'
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'META_INF/mods.toml'
     }
 }
 
@@ -27,19 +64,12 @@ configurations.all {
     resolutionStrategy.cacheDynamicVersionsFor 7200, 'hours'
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
 ext {
     curseApiKey = ""
     curseReleaseType = "alpha"
 }
 
-version = minecraft_version + "-" + "b" + cibuild + "-univeral"
-group = "com.fireball1725.devworld"
-archivesBaseName = cibasename
-
-// If TeamCity is running this build, lets set the version info
+//If TeamCity is running this build, lets set the version info
 if (hasProperty("teamcity")) {
     version = minecraft_version + "-" + teamcity["build.number"] + "-client"
 
@@ -50,53 +80,9 @@ if (hasProperty("teamcity")) {
     curseReleaseType = teamcity["releaseType"]
 }
 
-minecraft {
-    version = minecraft_version + "-" + forge_version
-
-    replaceIn "ModInfo.java"
-
-    replace "@VERSION@", project.version
-    replace "@MCVERSION@", minecraft_version
-
-    runDir = "run"
-    mappings = "snapshot_20170724"
-
-    useDepAts = true
-}
-
-processResources
-        {
-            // this will ensure that this task is redone when the versions change.
-            inputs.property "version", project.version
-            inputs.property "mcversion", project.minecraft.version
-
-            // replace stuff in mcmod.info, nothing else
-            from(sourceSets.main.resources.srcDirs) {
-                include 'mcmod.info'
-
-                // replace version and mcversion
-                expand 'version':project.version, 'mcversion':project.minecraft.version
-            }
-
-            // copy everything else, thats not the mcmod.info
-            from(sourceSets.main.resources.srcDirs) {
-                exclude 'mcmod.info'
-            }
-        }
-
 // Add Access Transformers Manifest
 jar {
     manifest {
         attributes 'FMLAT': 'AppliedLogistics_at.cfg'
-    }
-}
-curseforge {
-    apiKey = curseApiKey
-    project {
-        releaseType = curseReleaseType
-        id = "243748"
-        changelog = file("build/libs/changelog.txt")
-        addGameVersion minecraft_version
-        addArtifact devJar
     }
 }
