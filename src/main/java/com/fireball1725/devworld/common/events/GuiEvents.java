@@ -1,25 +1,20 @@
 package com.fireball1725.devworld.common.events;
 
 import java.io.File;
-import java.nio.file.FileSystem;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
 
 import com.fireball1725.devworld.ModInfo;
-import com.mojang.datafixers.DataFixer;
-import com.mojang.datafixers.DataFixerUpper;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.GuiWorldSelection;
-import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.SharedConstants;
 import net.minecraft.world.GameType;
 import net.minecraft.world.WorldSettings;
 import net.minecraft.world.WorldType;
@@ -31,8 +26,6 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.gui.GuiButtonClickConsumer;
 import net.minecraftforge.fml.common.Mod;
-
-//import net.minecraft.util.ChatAllowedCharacters;
 
 @Mod.EventBusSubscriber( modid = ModInfo.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class GuiEvents {
@@ -49,8 +42,9 @@ public class GuiEvents {
             int buttonY = event.getGui().height / 4 + 48;
             GuiButton singlePlayerButton = event.getButtonList().get( 0 );
             event.removeButton( singlePlayerButton ); // Remove the single player world button...
-            event.addButton( new GuiButtonClickConsumer( 1725, event.getGui().width / 2 + 2, buttonY, 98, 20, "New Dev World", this::createDevWorld ) );
-            event.addButton( new GuiButtonClickConsumer(1, event.getGui().width / 2 - 100, buttonY, 98, 20, I18n.format("menu.singleplayer" ), singlePlayerButton::onClick ) );
+
+            event.addButton( new GuiButtonClickConsumer( 1725, event.getGui().width / 2 + 2, buttonY, 98, 20, I18n.format( "New Dev World", new Object[0] ), this::createDevWorld ) );
+            event.addButton( new GuiButtonClickConsumer(1, event.getGui().width / 2 - 100, buttonY, 98, 20, I18n.format( "menu.singleplayer", new Object[0] ), singlePlayerButton::onClick ) );
         }
     }
 
@@ -90,10 +84,10 @@ public class GuiEvents {
     {
         this.worldSaveName = this.worldName.trim();
 
-//        for (char c0 : ChatAllowedCharacters.ILLEGAL_FILE_CHARACTERS)
-//        {
-//            this.worldSaveName = this.worldSaveName.replace(c0, '_');
-//        }
+        for (char c0 : SharedConstants.ILLEGAL_FILE_CHARACTERS)
+        {
+            this.worldSaveName = this.worldSaveName.replace(c0, '_');
+        }
 
         if (StringUtils.isEmpty(this.worldSaveName))
         {
@@ -125,17 +119,18 @@ public class GuiEvents {
 
     private ISaveFormat saveLoader;
 
-    public void launchIntegratedServer(String p_71371_1_, String p_71371_2_, WorldSettings p_71371_3_) {
-        String savesPathString = Minecraft.getInstance().gameDir + File.separator + "saves";
-        this.saveLoader = new AnvilSaveConverter( Paths.get( savesPathString ), Paths.get( savesPathString ), Minecraft.getInstance().getDataFixer() );
+    public void launchIntegratedServer(String folderName, String worldSaveName, WorldSettings settings) {
+        this.saveLoader = new AnvilSaveConverter( Paths.get( mc.gameDir + File.separator + "saves" ), Paths.get( mc.gameDir + File.separator + "backups" ), mc.getDataFixer() );
 
-        Minecraft.getInstance().loadWorld( null );
+        mc.loadWorld( null );
         System.gc();
-        ISaveHandler isavehandler = saveLoader.getSaveLoader(p_71371_1_, Minecraft.getInstance().getIntegratedServer());
+        ISaveHandler isavehandler = saveLoader.getSaveLoader( folderName, mc.getIntegratedServer());
 
         NBTTagCompound worldData = new NBTTagCompound();
         worldData.setString("generatorName", "flat");
-        worldData.setString("generatorOptions", "minecraft:bedrock,3*minecraft:stone,52*minecraft:sandstone");
+
+        NBTTagCompound generatorOptions = presetStringToGeneratorCompound( "minecraft:bedrock,3*minecraft:stone,52*minecraft:sandstone;minecraft:desert;" );
+        worldData.setTag("generatorOptions", generatorOptions);
         worldData.setInt("generatorVersion", 0);
 
         worldData.setInt("GameType", 1);
@@ -143,7 +138,7 @@ public class GuiEvents {
         worldData.setBoolean("MapFeatures", true);
 
         worldData.setInt("SpawnX", 0);
-        worldData.setInt("SpawnY", 80);
+        worldData.setInt("SpawnY", 57);
         worldData.setInt("SpawnZ", 0);
 
         worldData.setLong("Time", 6000);
@@ -160,12 +155,47 @@ public class GuiEvents {
 
         worldData.setTag("GameRules", worldRules);
 
-        WorldInfo worldInfo = new WorldInfo(worldData, Minecraft.getInstance().getDataFixer(), 1519, null);
+        WorldInfo worldInfo = new WorldInfo(worldData, mc.getDataFixer(), 1519, null);
 
         isavehandler.saveWorldInfo(worldInfo);
 
-        WorldSettings worldSettings = new WorldSettings(worldInfo);
+        if (settings == null)
+            settings = new WorldSettings(worldInfo);
 
-        Minecraft.getInstance().launchIntegratedServer(p_71371_1_, p_71371_2_, worldSettings);
+        Minecraft.getInstance().launchIntegratedServer( folderName, worldSaveName, settings );
+    }
+
+    private NBTTagCompound presetStringToGeneratorCompound(String presetString) {
+        String layerString = presetString.split( ";" )[0];
+        String biomeID = presetString.split( ";" )[1];
+
+        NBTTagList layersList = new NBTTagList();
+        NBTTagCompound genOptions = new NBTTagCompound();
+
+        genOptions.setTag( "structures", new NBTTagCompound() ); //TODO: Support structures
+        genOptions.setString( "biome", biomeID );
+
+        String[] layers = layerString.split( "," );
+        for (String layer : layers)
+        {
+            String block;
+            int height;
+
+            if (layer.contains( "*" )) {
+                block = layer.split( "\\*" )[1];
+                height = Integer.parseInt(layer.split( "\\*" )[0]);
+            } else {
+                block = layer;
+                height = 1;
+            }
+
+            NBTTagCompound layerNBT = new NBTTagCompound();
+            layerNBT.setString( "block", block );
+            layerNBT.setByte( "height", ( ( byte ) height ) );
+            layersList.add( layerNBT );
+        }
+
+        genOptions.setTag( "layers", layersList );
+        return genOptions;
     }
 }

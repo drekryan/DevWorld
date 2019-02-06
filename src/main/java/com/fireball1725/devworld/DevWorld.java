@@ -21,7 +21,8 @@ public class DevWorld {
         FMLModLoadingContext.get().getModEventBus().addListener( this::setup );
     }
 
-    public void setup( FMLCommonSetupEvent event) {
+    @SuppressWarnings( "unused" )
+    private void setup( FMLCommonSetupEvent event ) {
         proxy.registerEvents();
     }
 }
