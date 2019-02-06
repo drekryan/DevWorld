@@ -1,14 +1,6 @@
-apply plugin: 'net.minecraftforge.gradle'
-
-apply from: 'gradle/scripts/dependencies.gradle'
-apply from: 'gradle/scripts/integration.gradle'
-apply from: 'gradle/scripts/artifacts.gradle'
-//apply from: 'gradle/scripts/optional.gradle'
-
 buildscript {
     repositories {
         maven { url = 'https://files.minecraftforge.net/maven' }
-        maven { url = 'https://plugins.gradle.org/m2/' }
         jcenter()
         mavenCentral()
     }
@@ -17,6 +9,8 @@ buildscript {
     }
 }
 
+apply plugin: 'net.minecraftforge.gradle'
+
 version = minecraft_version + "-" + "b" + cibuild + "-univeral"
 group = "com.fireball1725.devworld"
 archivesBaseName = cibasename
@@ -24,65 +18,39 @@ archivesBaseName = cibasename
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaVersion.VERSION_1_8
 
 minecraft {
-    //replaceIn "ModInfo.java"
-
-    //replace "@VERSION@", project.version
-    //replace "@MCVERSION@", minecraft_version
-
     mappings channel: 'snapshot', version: '20180921-1.13'
     runs {
         client = {
+            // recommended logging data for a userdev environment
+            properties 'forge.logging.markers': 'SCAN,REGISTRIES,REGISTRYDUMP'
+            // recommended logging level for the console
+            properties 'forge.logging.console.level': 'debug'
             workingDirectory project.file('run').canonicalPath
             source sourceSets.main
         }
         server = {
+            // recommended logging data for a userdev environment
+            properties 'forge.logging.markers': 'SCAN,REGISTRIES,REGISTRYDUMP'
+            // recommended logging level for the console
+            properties 'forge.logging.console.level': 'debug'
             workingDirectory project.file('run').canonicalPath
+            source sourceSets.main
         }
     }
 }
 
 dependencies {
-    minecraft 'net.minecraftforge.test:forge:1.13-24.0.115-1.13-pre'
+    minecraft 'net.minecraftforge.test:forge:1.13-24.0.152-1.13-pre'
 }
 
-processResources {
-    inputs.property 'version', project.version
-    inputs.property 'mcversion', '1.13'
-
-    from(sourceSets.main.resources.srcDirs) {
-        include 'META_INF/mods.toml'
-
-        expand 'version': project.version, 'mcversion': '1.13'
-    }
-
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'META_INF/mods.toml'
-    }
-}
-
-configurations.all {
-    resolutionStrategy.cacheDynamicVersionsFor 7200, 'hours'
-}
-
-ext {
-    curseApiKey = ""
-    curseReleaseType = "alpha"
-}
-
-//If TeamCity is running this build, lets set the version info
-if (hasProperty("teamcity")) {
-    version = minecraft_version + "-" + teamcity["build.number"] + "-client"
-
-    // Fix for main branch being built
-    version = version.replaceAll("/", "-")
-
-    curseApiKey = teamcity["apiKey"]
-    curseReleaseType = teamcity["releaseType"]
-}
-
-// Add Access Transformers Manifest
 jar {
     manifest {
-        attributes 'FMLAT': 'AppliedLogistics_at.cfg'
+        attributes(["Specification-Title"     : "devworld",
+                    "Specification-Vendor"    : "FireBall1725",
+                    "Specification-Version"   : "24.0", // We are version 1 of the modlauncher specification
+                    "Implementation-Title"    : project.name,
+                    "Implementation-Version"  : "${version}",
+                    "Implementation-Vendor"   : "FireBall1725",
+                    "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")],)
     }
 }

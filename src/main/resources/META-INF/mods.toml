@@ -16,7 +16,7 @@ authors="FireBall1725" #optional
     # The modid of the mod
     modId="devworld" #mandatory
     # The version number of the mod - there's a few well known ${} variables useable here or just hardcode it
-    version="${version}" #mandatory
+    version="1.13-b19-client" #mandatory
      # A display name for the mod
     displayName="Developer World" #mandatory
     # The description text for the mod (multi line!) (#mandatory)

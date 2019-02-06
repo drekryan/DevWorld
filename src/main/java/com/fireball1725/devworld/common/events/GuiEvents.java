@@ -1,13 +1,25 @@
 package com.fireball1725.devworld.common.events;
 
+import java.io.File;
+import java.nio.file.FileSystem;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Random;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.fireball1725.devworld.ModInfo;
+import com.mojang.datafixers.DataFixer;
+import com.mojang.datafixers.DataFixerUpper;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiWorldSelection;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatAllowedCharacters;
 import net.minecraft.world.GameType;
 import net.minecraft.world.WorldSettings;
 import net.minecraft.world.WorldType;
@@ -17,12 +29,12 @@ import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.client.gui.GuiButtonClickConsumer;
+import net.minecraftforge.fml.common.Mod;
 
-import org.apache.commons.lang3.StringUtils;
+//import net.minecraft.util.ChatAllowedCharacters;
 
-import java.io.File;
-import java.util.Random;
-
+@Mod.EventBusSubscriber( modid = ModInfo.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class GuiEvents {
     private Minecraft mc = Minecraft.getInstance();
     private String worldName = "Development World";
@@ -30,51 +42,48 @@ public class GuiEvents {
     private static final String[] disallowedFilenames = new String[] {"CON", "COM", "PRN", "AUX", "CLOCK$", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
 
     @SubscribeEvent
-    public void onScreenInitPost(GuiScreenEvent.InitGuiEvent.Post event) {
-        if (event.getGui() instanceof GuiMainMenu) {
+    public void onScreenInitPost( GuiScreenEvent.InitGuiEvent.Post event )
+    {
+        if ( event.getGui() instanceof GuiMainMenu )
+        {
             int buttonY = event.getGui().height / 4 + 48;
-            event.getButtonList().remove(0); // Remove the single player world button...
-
-            event.getButtonList().add(new GuiButton(1725, event.getGui().width / 2 + 2, buttonY, 98, 20, I18n.format("New Dev World", new Object[0])));
-            event.getButtonList().add(new GuiButton(1, event.getGui().width / 2 - 100, buttonY, 98, 20, I18n.format("menu.singleplayer", new Object[0])));
+            GuiButton singlePlayerButton = event.getButtonList().get( 0 );
+            event.removeButton( singlePlayerButton ); // Remove the single player world button...
+            event.addButton( new GuiButtonClickConsumer( 1725, event.getGui().width / 2 + 2, buttonY, 98, 20, "New Dev World", this::createDevWorld ) );
+            event.addButton( new GuiButtonClickConsumer(1, event.getGui().width / 2 - 100, buttonY, 98, 20, I18n.format("menu.singleplayer" ), singlePlayerButton::onClick ) );
         }
     }
 
-    @SubscribeEvent
-    public void onButtonClickPost(GuiScreenEvent.ActionPerformedEvent.Post event) {
-        if (event.getGui() instanceof GuiMainMenu) {
-            if (event.getButton().id == 1725) {
-                // todo: make a new world...
-                this.mc.displayGuiScreen((GuiScreen)null);
+    private void createDevWorld( double v, double v1 )
+    {
+        this.mc.displayGuiScreen( null );
 
-                long i = (new Random()).nextLong();
-                String s = "DevWorld"; // World Seed
+        long i = ( new Random() ).nextLong();
+        String s = "DevWorld"; // World Seed
 
-                if (!StringUtils.isEmpty(s))
+        if ( !StringUtils.isEmpty( s ) )
+        {
+            try
+            {
+                long j = Long.parseLong( s );
+
+                if ( j != 0L )
                 {
-                    try
-                    {
-                        long j = Long.parseLong(s);
-
-                        if (j != 0L)
-                        {
-                            i = j;
-                        }
-                    }
-                    catch (NumberFormatException var7)
-                    {
-                        i = (long)s.hashCode();
-                    }
+                    i = j;
                 }
-
-                GameType gameType = GameType.CREATIVE;
-                WorldSettings worldsettings = new WorldSettings(i, gameType, true, false, WorldType.FLAT);
-
-                func_146314_g();
-
-                this.launchIntegratedServer(this.worldSaveName, this.worldName.trim(), worldsettings);
+            }
+            catch ( NumberFormatException var7 )
+            {
+                i = ( long ) s.hashCode();
             }
         }
+
+        GameType gameType = GameType.CREATIVE;
+        WorldSettings worldsettings = new WorldSettings( i, gameType, true, false, WorldType.FLAT );
+
+        func_146314_g();
+
+        this.launchIntegratedServer( this.worldSaveName, this.worldName.trim(), worldsettings );
     }
 
     private void func_146314_g()
@@ -117,15 +126,16 @@ public class GuiEvents {
     private ISaveFormat saveLoader;
 
     public void launchIntegratedServer(String p_71371_1_, String p_71371_2_, WorldSettings p_71371_3_) {
-        this.saveLoader = new AnvilSaveConverter(new File(Minecraft.getInstance().gameDir.toString(), "saves"), null);
+        String savesPathString = Minecraft.getInstance().gameDir + File.separator + "saves";
+        this.saveLoader = new AnvilSaveConverter( Paths.get( savesPathString ), Paths.get( savesPathString ), Minecraft.getInstance().getDataFixer() );
 
-        Minecraft.getInstance().loadWorld((WorldClient)null);
+        Minecraft.getInstance().loadWorld( null );
         System.gc();
-        ISaveHandler isavehandler = saveLoader.getSaveLoader(p_71371_1_, false);
+        ISaveHandler isavehandler = saveLoader.getSaveLoader(p_71371_1_, Minecraft.getInstance().getIntegratedServer());
 
         NBTTagCompound worldData = new NBTTagCompound();
         worldData.setString("generatorName", "flat");
-        worldData.setString("generatorOptions", "3;minecraft:bedrock,3*minecraft:stone,52*minecraft:sandstone;2;");
+        worldData.setString("generatorOptions", "minecraft:bedrock,3*minecraft:stone,52*minecraft:sandstone");
         worldData.setInt("generatorVersion", 0);
 
         worldData.setInt("GameType", 1);
@@ -150,7 +160,7 @@ public class GuiEvents {
 
         worldData.setTag("GameRules", worldRules);
 
-        WorldInfo worldInfo = new WorldInfo(worldData, null, 0, null);
+        WorldInfo worldInfo = new WorldInfo(worldData, Minecraft.getInstance().getDataFixer(), 1519, null);
 
         isavehandler.saveWorldInfo(worldInfo);
 
