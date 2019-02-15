@@ -11,28 +11,23 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-version = minecraft_version + "-" + "b" + cibuild + "-univeral"
+version = "${project.mcversion}" + "-" + "b" + cibuild + "-univeral"
 group = "com.fireball1725.devworld"
 archivesBaseName = cibasename
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaVersion.VERSION_1_8
 
 minecraft {
-    mappings channel: 'snapshot', version: '20180921-1.13'
+    mappings channel: "snapshot", version: "${project.mcp_mappings}".toString()
     runs {
         client = {
-            // recommended logging data for a userdev environment
             properties 'forge.logging.markers': 'SCAN,REGISTRIES,REGISTRYDUMP'
-            // recommended logging level for the console
             properties 'forge.logging.console.level': 'debug'
+            properties 'forge.logging.noansi': 'false'
             workingDirectory project.file('run').canonicalPath
             source sourceSets.main
         }
         server = {
-            // recommended logging data for a userdev environment
-            properties 'forge.logging.markers': 'SCAN,REGISTRIES,REGISTRYDUMP'
-            // recommended logging level for the console
-            properties 'forge.logging.console.level': 'debug'
             workingDirectory project.file('run').canonicalPath
             source sourceSets.main
         }
@@ -40,14 +35,18 @@ minecraft {
 }
 
 dependencies {
-    minecraft 'net.minecraftforge.test:forge:1.13-24.0.152-1.13-pre'
+    minecraft([
+            group  : "${project.forgegroup}",
+            name   : "forge",
+            version: "${project.mcversion}-${project.forgeversion}"
+    ])
 }
 
 jar {
     manifest {
-        attributes(["Specification-Title"     : "devworld",
+        attributes(["Specification-Title"     : "${project.cibasename}",
                     "Specification-Vendor"    : "FireBall1725",
-                    "Specification-Version"   : "24.0", // We are version 1 of the modlauncher specification
+                    "Specification-Version"   : "25.0", // We are version 1 of the modlauncher specification
                     "Implementation-Title"    : project.name,
                     "Implementation-Version"  : "${version}",
                     "Implementation-Vendor"   : "FireBall1725",
